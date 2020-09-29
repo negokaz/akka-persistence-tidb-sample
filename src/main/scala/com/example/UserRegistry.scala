@@ -4,6 +4,9 @@ package com.example
 import akka.actor.typed.ActorRef
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
+import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.scaladsl.{ Effect, EventSourcedBehavior }
+
 import scala.collection.immutable
 
 //#user-case-classes
@@ -22,22 +25,36 @@ object UserRegistry {
   final case class GetUserResponse(maybeUser: Option[User])
   final case class ActionPerformed(description: String)
 
-  def apply(): Behavior[Command] = registry(Set.empty)
+  sealed trait Event                         extends AppSerializable
+  final case class UserCreated(user: User)   extends Event
+  final case class UserDeleted(name: String) extends Event
 
-  private def registry(users: Set[User]): Behavior[Command] =
-    Behaviors.receiveMessage {
-      case GetUsers(replyTo) =>
-        replyTo ! Users(users.toSeq)
-        Behaviors.same
-      case CreateUser(user, replyTo) =>
-        replyTo ! ActionPerformed(s"User ${user.name} created.")
-        registry(users + user)
-      case GetUser(name, replyTo) =>
-        replyTo ! GetUserResponse(users.find(_.name == name))
-        Behaviors.same
-      case DeleteUser(name, replyTo) =>
-        replyTo ! ActionPerformed(s"User $name deleted.")
-        registry(users.filterNot(_.name == name))
-    }
+  def apply(): Behavior[Command] =
+    EventSourcedBehavior[Command, Event, Set[User]](
+      persistenceId = PersistenceId.ofUniqueId("user_registry"),
+      emptyState = Set.empty,
+      commandHandler = (users, cmd) =>
+        cmd match {
+          case GetUsers(replyTo) =>
+            Effect.reply(replyTo)(Users(users.toSeq))
+          case CreateUser(user, replyTo) =>
+            Effect
+              .persist(UserCreated(user))
+              .thenReply(replyTo)(_ => ActionPerformed(s"User ${user.name} created."))
+          case GetUser(name, replyTo) =>
+            Effect.reply(replyTo)(GetUserResponse(users.find(_.name == name)))
+          case DeleteUser(name, replyTo) =>
+            Effect
+              .persist(UserDeleted(name))
+              .thenReply(replyTo)(_ => ActionPerformed(s"User $name deleted."))
+        },
+      eventHandler = (users, evt) =>
+        evt match {
+          case UserCreated(user) =>
+            users + user
+          case UserDeleted(name) =>
+            users.filter(_.name == name)
+        },
+    )
 }
 //#user-registry-actor
