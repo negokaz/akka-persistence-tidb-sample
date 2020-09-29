@@ -50,7 +50,8 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
                   complete((StatusCodes.Created, performed))
                 }
               }
-            })
+            },
+          )
         },
         //#users-get-delete
         //#users-get-post
@@ -71,8 +72,10 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
                 complete((StatusCodes.OK, performed))
               }
               //#users-delete-logic
-            })
-        })
+            },
+          )
+        },
+      )
       //#users-get-delete
     }
   //#all-routes
