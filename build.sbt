@@ -19,6 +19,7 @@ lazy val root = (project in file(".")).settings(
       "com.lightbend.akka" %% "akka-persistence-jdbc"    % "4.0.0",
       "com.typesafe.slick" %% "slick"                    % slickVersion,
       "com.typesafe.slick" %% "slick-hikaricp"           % slickVersion,
+      "mysql"               % "mysql-connector-java"     % "8.0.21",
       "ch.qos.logback"      % "logback-classic"          % "1.2.3",
       "com.typesafe.akka"  %% "akka-http-testkit"        % akkaHttpVersion % Test,
       "com.typesafe.akka"  %% "akka-actor-testkit-typed" % akkaVersion     % Test,
